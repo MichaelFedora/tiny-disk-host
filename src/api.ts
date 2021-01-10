@@ -1,24 +1,14 @@
 import * as path from 'path';
-import { pbkdf2, randomBytes } from 'crypto';
-import { json, Router, static as staticServe } from 'express';
+import { randomBytes } from 'crypto';
+import { json, Router } from 'express';
 import * as fs from 'fs-extra';
 
 import { AuthError, MalformedError, NotAllowedError } from './errors';
 import { Config, User } from './types';
 import { handleError, handleValidationError, parseTrue, validateSession, wrapAsync } from './middleware';
+import { hash, sizeOf } from './util';
 
 import db from './db';
-
-async function hash(salt: string, password: string) {
-  return new Promise<string>((res, rej) => {
-    pbkdf2(password, salt, 10000, 512, 'sha256', (err, data) => {
-      if(err)
-        return rej(err);
-      else
-        return res(data.toString('hex'));
-    });
-  });
-}
 
 class Api {
 
@@ -119,14 +109,30 @@ class Api {
     }));
 
     filesRouter.put('/:path', wrapAsync(async (req, res) => {
+      const length = Number(req.headers['content-length'] || req.headers['Content-Length']) || 0;
+
+      if(config.storageMax) {
+        const size = await sizeOf(config.storageRoot) + length;
+        if(size > config.storageMax)
+          throw new NotAllowedError('Storage max reached.');
+      }
+
+      if(config.userStorageMax) {
+        const size = await sizeOf(path.join(config.storageRoot, req.user.id)) + length;
+        if(size > config.userStorageMax)
+          throw new NotAllowedError('User storage max reached.');
+      }
+
       await fs.writeFile(req.params.filePath, req.body);
       const stat = await fs.stat(req.params.path);
+
       await db.setFileInfo(req.params.infoPath, {
         name: path.parse(req.params.filePath).name,
         size: stat.size,
         modified: Date.now(),
         type: String(req.headers['content-type'] || req.headers['Content-Type'] || '') || undefined
       });
+
       res.sendStatus(204);
     }));
 
@@ -171,6 +177,23 @@ class Api {
         res.json(await db.listFiles(dirPath, page))
     }), handleError('list-files-path'));
 
+    this.router.get('/storage-stats', validateSession(), wrapAsync(async (req, res) => {
+      const used = await sizeOf(path.join(config.storageRoot, req.user.id));
+      let max = -1;
+
+      if(config.storageMax) {
+        const currentUsed = await sizeOf(path.join(config.storageRoot));
+
+        max = config.storageMax - currentUsed + used;
+
+        if(config.userStorageMax)
+          max = Math.min(max, config.userStorageMax);
+
+      } else if(config.userStorageMax)
+        max = config.userStorageMax
+
+      res.json({ used, available: max > 0 ? max - used : -1, max });
+    }))
 
     this.router.get('/:user/public/:path', wrapAsync(async (req, res) => {
       const rootPath = path.join(config.storageRoot, req.params.user, 'public');

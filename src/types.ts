@@ -38,4 +38,7 @@ export interface Config {
 
   dbName: string;
   storageRoot: string;
+
+  userStorageMax?: number;
+  storageMax?: number;
 }

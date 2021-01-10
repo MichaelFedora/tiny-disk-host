@@ -5,5 +5,7 @@
   "sessionExpTime": 604800000,
 
   "dbName": "tiny-disk-db",
-  "storageRoot": "./storage"
+  "storageRoot": "./storage",
+
+  "storageUserMax": 10000
 }

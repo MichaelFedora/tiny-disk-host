@@ -2,8 +2,8 @@
 
 A tiny software to host a multi-user disk storage unit.
 
-**Warning**: Because this software remains simple, there is no
-disk-size limit. Use carefully.
+**Warning**: There is no encryption here, and therefore no privacy
+to from the host. Applications must encrypt the files if they so desire.
 
 ### Config
 
@@ -19,6 +19,9 @@ interface Config {
 
   dbName: string; // level db folder name
   storageRoot: string; // root storage folder
+
+  storageMax?: number; // max storage size in bytes
+  storageUserMax?: number; // max per-user storage size in bytes
 }
 ```
 

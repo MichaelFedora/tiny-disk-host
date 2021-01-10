@@ -23,12 +23,12 @@ class DB {
 
   // auth
 
-  async addSession(user: string, scope = '/'): Promise<string> {
+  async addSession(user: string, scopes = ['/']): Promise<string> {
     let id: string;
     do {
       id = v4();
     } while(await this.getSession(id) != null);
-    await this.db.put('session!!' + id, { user, created: Date.now(), scope });
+    await this.db.put('session!!' + id, { user, created: Date.now(), scopes });
     return id;
   }
 

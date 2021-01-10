@@ -18,7 +18,7 @@ export interface FileListAdvance {
 export interface Session {
   id?: string;
   user: string;
-  scope: string;
+  scopes: string[];
   created: number;
 }
 

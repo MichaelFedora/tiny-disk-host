@@ -2,6 +2,9 @@
 
 A tiny software to host a multi-user disk storage unit.
 
+**Warning**: Because this software remains simple, there is no
+disk-size limit. Use carefully.
+
 ### Config
 
 in `config.json`, with the following (annotated) schema:

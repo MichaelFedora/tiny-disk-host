@@ -3,7 +3,7 @@
 A tiny software to host a multi-user disk storage unit.
 
 **Warning**: There is no encryption here, and therefore no privacy
-to from the host. Applications must encrypt the files if they so desire.
+from the host. Applications must encrypt the files if they so desire.
 
 ### Config
 

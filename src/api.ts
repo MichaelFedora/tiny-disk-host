@@ -67,6 +67,21 @@ class Api {
       res.sendStatus(204);
     }));
 
+    authRouter.post('/change-pass', validateSession(), json(), wrapAsync(async (req, res) => {
+      if(!req.body.password || !req.body.newpass)
+        throw new MalformedError('Body must have a password, and a newpass.');
+
+      if(await hash(req.user.salt, req.body.password) !== req.user.pass)
+        throw new NotAllowedError('Password mismatch.');
+
+      const salt = randomBytes(128).toString('hex');
+      const pass = hash(salt, req.body.newpass);
+
+      await db.putUser(req.user.id, Object.assign(req.user, { salt, pass }));
+      const sessions = await db.getSessionsForUser(req.user.id);
+      await db.delManySessions(sessions.filter(a => a !== req.session.id));
+    }));
+
     authRouter.post('/logout', validateSession(), wrapAsync(async (req, res) => {
       await db.delSession(req.session.id);
       res.sendStatus(204);
@@ -79,6 +94,17 @@ class Api {
     }));
 
     this.router.use('/auth', authRouter);
+    this.router.delete('/self', validateSession(), wrapAsync(async (req, res) => {
+      if(req.user) {
+        await db.delUser(req.user.id);
+        await db.delFileInfoRecurse('/' + req.user.id);
+        await new Promise<void>((res, rej) =>
+          fs.rm(path.join(config.storageRoot, req.user.id), { recursive: true, maxRetries: 3 },
+          (e) => e ? rej(e) : res())
+        );
+      }
+      res.sendStatus(204);
+    }));
 
     // files
 

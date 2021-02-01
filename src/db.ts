@@ -42,6 +42,13 @@ class DB {
     return await this.db.del('session!!' + session);
   }
 
+  async delManySessions(sessions: readonly string[]): Promise<void> {
+    let batch = this.db.batch();
+    for(const sess of sessions)
+      batch = batch.del('session!!' + sess);
+    await batch.write();
+  }
+
   async cleanSessions(): Promise<void> {
     const sessions: string[] = [];
     const start = 'session!!';
@@ -50,13 +57,24 @@ class DB {
       const stream = this.db.createReadStream({ gt: start, lt: end });
       stream.on('data', ({ key, value }: { key: string, value: Session }) => {
         if((value.created + this.sessionExpTime) > Date.now())
-          sessions.push(key);
+          sessions.push(key.slice(0, start.length));
       }).on('close', () => res());
     });
-    let batch = this.db.batch();
-    for(const sess of sessions)
-      batch = batch.del(sess);
-    await batch.write();
+    await this.delManySessions(sessions);
+  }
+
+  async getSessionsForUser(user: string): Promise<string[]> {
+    const sessions: string[] = [];
+    const start = 'session!!';
+    const end = 'session!"'
+    await new Promise<void>(res => {
+      const stream = this.db.createReadStream({ gt: start, lt: end });
+      stream.on('data', ({ key, value }: { key: string, value: Session }) => {
+        if(value.user === user)
+          sessions.push(key.slice(0, start.length));
+      }).on('close', () => res());
+    });
+    return sessions;
   }
 
   async addUser(user: User): Promise<string> {
@@ -87,21 +105,19 @@ class DB {
   }
 
   async getUserFromUsername(username: string): Promise<User> {
-    let user: User = null;
     let destroyed = false;
     const start = 'user!!';
     const end = 'user!"'
-    await new Promise<void>(res => {
-      const stream = this.db.createValueStream({ gt: start, lt: end });
-      stream.on('data', (value: User) => {
+    return await new Promise<User>(res => {
+      const stream = this.db.createReadStream({ gt: start, lt: end });
+      stream.on('data', ({ key, value }) => {
         if(!destroyed && value.username === username) {
           destroyed = true;
-          user = value;
+          res(Object.assign({ id: key.slice(start.length) }, value));
           (stream as any).destroy();
         }
-      }).on('close', () => res());
+      }).on('close', () => destroyed ? null : res(null));
     });
-    return user;
   }
 
   // files
@@ -114,6 +130,16 @@ class DB {
   }
   async delFileInfo(path: string): Promise<void> {
     await this.db.del('file!!' + path);
+  }
+  async delFileInfoRecurse(path: string): Promise<void> {
+    const start = 'file!!' + path;
+    const end = 'file!!' + path.slice(0, path.length - 1) + String.fromCharCode(path.charCodeAt(path.length - 1) + 1);
+    let batch = this.db.batch();
+    await new Promise<any>(res => {
+      const stream = this.db.createKeyStream({ gt: start, lt: end });
+      stream.on('data', (key: string) => batch.del(key))
+        .on('close', () => res(batch.write()));
+    });
   }
 
   async listFiles(path: string, page = 0): Promise<FileList> {

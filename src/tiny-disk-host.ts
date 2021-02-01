@@ -26,6 +26,16 @@ try {
   process.exit(1);
 }
 
+async function cleanSessions() {
+  try {
+    await db.cleanSessions();
+    setTimeout(cleanSessions, 10 * 60 * 1000);
+  } catch(e) {
+    console.error(`Error cleaning sessions: ${e.stack || e}`);
+  }
+}
+cleanSessions();
+
 try {
 
   const app = express();

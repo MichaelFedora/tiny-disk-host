@@ -15,12 +15,11 @@ class Api {
   private _router: Router;
   public get router() { return this._router; }
 
-  constructor() {
-    this._router = Router();
-    this.router.use(handleError('api'));
-  }
+  constructor() { }
 
   init(config: Config) {
+
+    this._router = Router();
 
     // auth
 
@@ -235,6 +234,8 @@ class Api {
       else */
         res.sendFile(filePath);
     }));
+
+    this.router.use(handleError('api'));
   }
 }
 

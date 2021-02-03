@@ -220,7 +220,7 @@ class Api {
       res.json({ used, available: max > 0 ? max - used : -1, max });
     }))
 
-    this.router.get('/:user/public/:path', wrapAsync(async (req, res) => {
+    this.router.get('/public/:user/:path', wrapAsync(async (req, res) => {
       const rootPath = path.join(config.storageRoot, req.params.user, 'public');
       const filePath = path.join(rootPath, req.params.path);
 

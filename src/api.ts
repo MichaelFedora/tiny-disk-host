@@ -2,6 +2,7 @@ import * as path from 'path';
 import { randomBytes } from 'crypto';
 import { json, Router } from 'express';
 import * as fs from 'fs-extra';
+import * as mime from 'mime-types';
 
 import { AuthError, MalformedError, NotAllowedError } from './errors';
 import { Config, User } from './types';
@@ -137,7 +138,6 @@ class Api {
 
     filesRouter.put(new RegExp(`/${PATH_REGEX}`), wrapAsync(async (req, res) => {
       const length = Number(req.headers['content-length'] || req.headers['Content-Length']) || 0;
-      const type = String(req.query.contentType || req.headers['content-type'] || req.headers['Content-Type'] || 'application/octet-stream');
 
       if(config.storageMax) {
         const size = await sizeOf(config.storageRoot) + length;
@@ -162,9 +162,12 @@ class Api {
         });
       }
       const stat = await fs.stat(req.filesParams.filePath);
+      const parsed = path.parse(req.filesParams.filePath);
+      const header = req.headers['content-type'] || req.headers['Content-Type'];
+      const type = String(req.query.contentType || mime.lookup(parsed.ext) || (header !== 'application/x-www-form-urlencoded' ? header : '') || 'application/octet-stream');
 
       await db.setFileInfo(req.filesParams.infoPath, {
-        name: path.parse(req.filesParams.filePath).base,
+        name: parsed.base,
         size: stat.size,
         modified: Date.now(),
         type

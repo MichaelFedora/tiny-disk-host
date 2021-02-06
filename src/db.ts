@@ -17,6 +17,10 @@ class DB {
     this._db = level(config.dbName, { valueEncoding: 'json' }) as any;
     this._db.safeGet = (key: string) => this._db.get(key).catch(e => { if(e.notFound) return null; else throw e; });
     this.sessionExpTime = config.sessionExpTime;
+    /* dump
+    this.db.createReadStream({ gt: 'file!!', lt: 'file!"' })
+      .on('data', ({ key, value }) => console.log(key, value));
+    //*/
   }
 
   close() { return this.db.close(); }

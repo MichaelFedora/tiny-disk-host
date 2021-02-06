@@ -5,7 +5,7 @@ import * as fs from 'fs-extra';
 
 import { AuthError, MalformedError, NotAllowedError } from './errors';
 import { Config, User } from './types';
-import { handleError, handleValidationError, parseTrue, validateSession, wrapAsync } from './middleware';
+import { handleError, handleValidationError, parseTrue, validateSession, wrapAsync, PATH_REGEX } from './middleware';
 import { hash, sizeOf } from './util';
 
 import db from './db';
@@ -109,32 +109,35 @@ class Api {
 
     const filesRouter = Router({ mergeParams: true });
 
-    filesRouter.use('/:path', validateSession(), (req, _, next) => {
-      const rootPath = path.join(config.storageRoot, req.user.id);
-      const filePath = path.join(rootPath, req.params.path);
+    filesRouter.use(new RegExp(`/${PATH_REGEX}`), validateSession(), (req, _, next) => {
+      req.filesParams = { };
+      req.filesParams.path = req.params[0];
+      const rootPath = path.resolve(config.storageRoot, req.user.id);
+      const filePath = path.join(rootPath, req.params[0]);
 
       if(!filePath.startsWith(rootPath) || filePath.length - 1 < rootPath.length)
         throw new NotAllowedError('Malformed path!');
 
-      const infoPath = path.join('/' + req.user.id, req.params.path);
+      const infoPath = path.join('/' + req.user.id, req.params[0]).replace(/\\/g, '/');
 
-      if(!req.session.scopes.find(scope => infoPath.startsWith(scope)))
+      if(!req.session.scopes.find(scope => req.params[0].startsWith(scope.slice(1))))
         throw new NotAllowedError('Path out of scope(s)!');
 
-      req.params.infoPath = infoPath;
-      req.params.filePath = filePath;
+      req.filesParams.infoPath = infoPath;
+      req.filesParams.filePath = filePath;
       next();
     });
 
-    filesRouter.get('/:path', wrapAsync(async (req, res) => {
+    filesRouter.get(new RegExp(`/${PATH_REGEX}`), wrapAsync(async (req, res) => {
       if(parseTrue(req.query.info))
-        res.json(await db.getFileInfo(req.params.infoPath));
+        res.json(await db.getFileInfo(req.filesParams.infoPath));
       else
-        res.sendFile(req.params.filePath);
+        res.sendFile(req.filesParams.filePath);
     }));
 
-    filesRouter.put('/:path', wrapAsync(async (req, res) => {
+    filesRouter.put(new RegExp(`/${PATH_REGEX}`), wrapAsync(async (req, res) => {
       const length = Number(req.headers['content-length'] || req.headers['Content-Length']) || 0;
+      const type = String(req.query.contentType || req.headers['content-type'] || req.headers['Content-Type'] || 'application/octet-stream');
 
       if(config.storageMax) {
         const size = await sizeOf(config.storageRoot) + length;
@@ -148,22 +151,31 @@ class Api {
           throw new NotAllowedError('User storage max reached.');
       }
 
-      await fs.writeFile(req.params.filePath, req.body);
-      const stat = await fs.stat(req.params.path);
+      fs.ensureFileSync(req.filesParams.filePath);
+      if(req.body) {
+        await fs.writeFile(req.filesParams.filePath, req.body);
+      } else {
+        await new Promise<void>((res, rej) => {
+          req.pipe(fs.createWriteStream(req.filesParams.filePath, { mode: 0o600 }))
+            .on('close', res)
+            .on('error', rej)
+        });
+      }
+      const stat = await fs.stat(req.filesParams.filePath);
 
-      await db.setFileInfo(req.params.infoPath, {
-        name: path.parse(req.params.filePath).name,
+      await db.setFileInfo(req.filesParams.infoPath, {
+        name: path.parse(req.filesParams.filePath).base,
         size: stat.size,
         modified: Date.now(),
-        type: String(req.headers['content-type'] || req.headers['Content-Type'] || '') || undefined
+        type
       });
 
       res.sendStatus(204);
     }));
 
-    filesRouter.delete('/:path', wrapAsync(async (req, res) => {
-      await fs.remove(req.params.filePath);
-      await db.delFileInfo(req.params.infoPath);
+    filesRouter.delete(new RegExp(`/${PATH_REGEX}`), wrapAsync(async (req, res) => {
+      await fs.remove(req.filesParams.filePath);
+      await db.delFileInfo(req.filesParams.infoPath);
       res.sendStatus(204);
     }));
 
@@ -172,7 +184,7 @@ class Api {
     // list-files
 
     this.router.get('/list-files', validateSession(), wrapAsync(async (req, res) => {
-      if(req.session.scopes.includes('/'))
+      if(!req.session.scopes.includes('/'))
         throw new NotAllowedError('Can only list-files root if scope is global ("/")!');
 
       const dirPath = '/' + req.user.id;
@@ -184,14 +196,11 @@ class Api {
         res.json(await db.listFiles(dirPath, page))
     }), handleError('list-files-global'));
 
-    this.router.get('/list-files/:path', validateSession(), wrapAsync(async (req, res) => {
-      const rootPath = '/' + req.user.id;
-      const dirPath = path.join(req.user.id, req.params.path);
+    this.router.get(new RegExp(`/list-files/${PATH_REGEX}`), validateSession(), wrapAsync(async (req, res) => {
+      req.params.path = req.params[0];
+      const dirPath = '/' + req.user.id + '/' + req.params.path;
 
-      if(!dirPath.startsWith(rootPath) || dirPath.length - 1 < rootPath.length)
-        throw new NotAllowedError('Malformed path!');
-
-      if(!req.session.scopes.find(scope => dirPath.startsWith(scope)))
+      if(!req.session.scopes.find(scope => req.params.path.startsWith(scope.slice(1))))
         throw new NotAllowedError('Path out of scope!');
 
       const page = Number(req.query.page) || 0;
@@ -221,7 +230,7 @@ class Api {
     }))
 
     this.router.get('/public/:user/:path', wrapAsync(async (req, res) => {
-      const rootPath = path.join(config.storageRoot, req.params.user, 'public');
+      const rootPath = path.resolve(config.storageRoot, req.params.user, 'public');
       const filePath = path.join(rootPath, req.params.path);
 
       if(!filePath.startsWith(rootPath) || filePath.length - 1 < rootPath.length)

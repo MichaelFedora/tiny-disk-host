@@ -6,6 +6,8 @@ import db from './db';
 
 const trueArray = ['true', '1', 'yes'];
 
+export const PATH_REGEX = '((?:[a-zA-Z0-9_\\-\\ \.]+/+)*[a-zA-Z0-9_\\-\\ \.]+)';
+
 export function parseTrue(query: any): boolean {
   return trueArray.includes(String(query).toLocaleLowerCase())
 }
@@ -37,13 +39,13 @@ export function handleError(action: string) {
 
     // console.log('Handle Error: ' + err);
 
-    if(err instanceof NotFoundError) {
+    if(err instanceof NotFoundError || err.status === 404) {
       res.sendStatus(404);
       return;
-    } else if(err instanceof NotAllowedError) {
+    } else if(err instanceof NotAllowedError || err.status === 403) {
       res.status(403).json({ message: err.message });
       return;
-    } else if(err instanceof MalformedError) {
+    } else if(err instanceof MalformedError || err.status === 400) {
       res.status(400).json({ message: err.message });
       return;
     } else if(err.type) {

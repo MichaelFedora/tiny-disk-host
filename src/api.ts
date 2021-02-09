@@ -94,15 +94,18 @@ class Api {
     }));
 
     this.router.use('/auth', authRouter);
+    this.router.get('/self', validateSession(), wrapAsync(async (req, res) => {
+      res.json({ id: req.user.id, username: req.user.username,});
+    }));
     this.router.delete('/self', validateSession(), wrapAsync(async (req, res) => {
-      if(req.user) {
+      if(req.user && req.session.scopes.includes('/')) {
         await db.delUser(req.user.id);
         await db.delFileInfoRecurse('/' + req.user.id);
         await new Promise<void>((res, rej) =>
           fs.rm(path.join(config.storageRoot, req.user.id), { recursive: true, maxRetries: 3 },
           (e) => e ? rej(e) : res())
         );
-      }
+      } else throw new NotAllowedError('Can only delete self with root scope!');
       res.sendStatus(204);
     }));
 

@@ -4,7 +4,7 @@ import { json, Router } from 'express';
 import * as fs from 'fs-extra';
 import * as mime from 'mime-types';
 
-import { AuthError, MalformedError, NotAllowedError } from './errors';
+import { AuthError, MalformedError, NotAllowedError, NotFoundError } from './errors';
 import { Config, User } from './types';
 import { handleError, handleValidationError, parseTrue, validateSession, wrapAsync, PATH_REGEX } from './middleware';
 import { hash, sizeOf } from './util';
@@ -232,9 +232,15 @@ class Api {
       res.json({ used, available: max > 0 ? max - used : -1, max });
     }))
 
-    this.router.get('/public/:user/:path', wrapAsync(async (req, res) => {
-      const rootPath = path.resolve(config.storageRoot, req.params.user, 'public');
-      const filePath = path.join(rootPath, req.params.path);
+    this.router.get(new RegExp(`/public/([^/]+)/${PATH_REGEX}`), wrapAsync(async (req, res) => {
+      const userName = req.params[0];
+      const user = await db.getUserFromUsername(userName);
+      if(!user)
+        throw new NotFoundError('User not found with username "' + userName + '"!');
+
+      const ppath = req.params[1];
+      const rootPath = path.resolve(config.storageRoot, user.id, 'public');
+      const filePath = path.join(rootPath, ppath);
 
       if(!filePath.startsWith(rootPath) || filePath.length - 1 < rootPath.length)
         throw new NotAllowedError('Malformed path!');
@@ -244,6 +250,7 @@ class Api {
       if(parseTrue(req.query.info))
         res.json(await db.getFileInfo(infoPath));
       else */
+      console.log('filepath', user, filePath);
         res.sendFile(filePath);
     }));
 

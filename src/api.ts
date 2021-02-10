@@ -5,7 +5,7 @@ import * as fs from 'fs-extra';
 import * as mime from 'mime-types';
 
 import { AuthError, MalformedError, NotAllowedError, NotFoundError } from './errors';
-import { Config, User } from './types';
+import { Config, FileListAdvance, User } from './types';
 import { handleError, handleValidationError, parseTrue, validateSession, wrapAsync, PATH_REGEX } from './middleware';
 import { hash, sizeOf } from './util';
 
@@ -248,13 +248,31 @@ class Api {
       if(!filePath.startsWith(rootPath) || filePath.length - 1 < rootPath.length)
         throw new NotAllowedError('Malformed path!');
 
-      /* const infoPath = path.join('/' + req.params.user, req.params.path);
+      const infoPath = '/' + user.id + '/public/' + req.params.path;
 
       if(parseTrue(req.query.info))
         res.json(await db.getFileInfo(infoPath));
-      else */
-      console.log('filepath', user, filePath);
+      else
         res.sendFile(filePath);
+    }));
+
+    this.router.post(new RegExp(`/public-info/([^/]+)`), json(), wrapAsync(async (req, res) => {
+      const userName = req.params[0];
+      const user = await db.getUserFromUsername(userName);
+      if(!user)
+        throw new NotFoundError('User not found with username "' + userName + '"!');
+
+      const paths: string[] = req.body;
+      if(!(paths instanceof Array && typeof paths[0] === 'string'))
+        throw new MalformedError('Body must be a string[]!');
+
+      const rootInfoPath = '/' + user.id + '/public';
+
+      const infoTree = { } as FileListAdvance['entries'];
+      for(const path of paths)
+        infoTree[path] = await db.getFileInfo(rootInfoPath + path)
+
+      res.json(infoTree);
     }));
 
     this.router.use(handleError('api'));

@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { randomBytes } from 'crypto';
-import { json, Router } from 'express';
+import { json, NextFunction, Request, Router } from 'express';
 import * as fs from 'fs-extra';
 import * as mime from 'mime-types';
 
@@ -113,33 +113,33 @@ class Api {
 
     const filesRouter = Router({ mergeParams: true });
 
-    filesRouter.use(new RegExp(`/${PATH_REGEX}`), validateSession(), (req, _, next) => {
+    const parsePath = (req: Request, _, next: NextFunction) => {
       req.filesParams = { };
       req.filesParams.path = req.params[0];
       const rootPath = path.resolve(config.storageRoot, req.user.id);
       const filePath = path.join(rootPath, req.params[0]);
 
       if(!filePath.startsWith(rootPath) || filePath.length - 1 < rootPath.length)
-        throw new NotAllowedError('Malformed path!');
+        return next(new NotAllowedError('Malformed path!'));
 
       const infoPath = path.join('/' + req.user.id, req.params[0]).replace(/\\/g, '/');
 
       if(!req.session.scopes.find(scope => req.params[0].startsWith(scope.slice(1))))
-        throw new NotAllowedError('Path out of scope(s)!');
+        return next(new NotAllowedError('Path out of scope(s)!'));
 
       req.filesParams.infoPath = infoPath;
       req.filesParams.filePath = filePath;
       next();
-    });
+    };
 
-    filesRouter.get(new RegExp(`/${PATH_REGEX}`), wrapAsync(async (req, res) => {
+    filesRouter.get(new RegExp(`/${PATH_REGEX}`), parsePath, wrapAsync(async (req, res) => {
       if(parseTrue(req.query.info))
         res.json(await db.getFileInfo(req.filesParams.infoPath));
       else
         res.sendFile(req.filesParams.filePath);
     }));
 
-    filesRouter.put(new RegExp(`/${PATH_REGEX}`), wrapAsync(async (req, res) => {
+    filesRouter.put(new RegExp(`/${PATH_REGEX}`), parsePath, wrapAsync(async (req, res) => {
       const length = Number(req.headers['content-length'] || req.headers['Content-Length']) || 0;
 
       if(config.storageMax) {
@@ -179,13 +179,13 @@ class Api {
       res.sendStatus(204);
     }));
 
-    filesRouter.delete(new RegExp(`/${PATH_REGEX}`), wrapAsync(async (req, res) => {
+    filesRouter.delete(new RegExp(`/${PATH_REGEX}`), parsePath, wrapAsync(async (req, res) => {
       await fs.remove(req.filesParams.filePath);
       await db.delFileInfo(req.filesParams.infoPath);
       res.sendStatus(204);
     }));
 
-    this.router.use('/files', filesRouter, handleError('files'));
+    this.router.use('/files', validateSession(), filesRouter, handleError('files'));
 
     // list-files
 

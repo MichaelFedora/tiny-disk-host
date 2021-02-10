@@ -6,7 +6,8 @@ import db from './db';
 
 const trueArray = ['true', '1', 'yes'];
 
-export const PATH_REGEX = '((?:[a-zA-Z0-9_\\-\\ \.]+/+)*[a-zA-Z0-9_\\-\\ \.]+)';
+export const PATH_REGEX = '(.+)';
+// '((?:[a-zA-Z0-9_\\-\\ \.]+/+)*[a-zA-Z0-9_\\-\\ \.]+)';
 
 export function parseTrue(query: any): boolean {
   return trueArray.includes(String(query).toLocaleLowerCase())

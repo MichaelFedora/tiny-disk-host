@@ -1,115 +1,22 @@
 import * as path from 'path';
-import { randomBytes } from 'crypto';
-import { json, NextFunction, Request, Router } from 'express';
+import { json, NextFunction, Request, Response, Router } from 'express';
 import * as fs from 'fs-extra';
 import * as mime from 'mime-types';
 
-import { AuthError, MalformedError, NotAllowedError, NotFoundError } from './errors';
-import { Config, FileListAdvance, User } from './types';
-import { handleError, handleValidationError, parseTrue, validateSession, wrapAsync, PATH_REGEX } from './middleware';
-import { hash, sizeOf } from './util';
+import { wrapAsync, handleError, MalformedError, NotAllowedError, NotFoundError } from 'tiny-host-common';
 
-import db from './db';
+import { FileListAdvance } from './types';
+import { parseTrue, sizeOf, PATH_REGEX } from './util';
 
-class Api {
+import { StoreDB } from './store-db';
 
-  private _router: Router;
-  public get router() { return this._router; }
+class StoreApi {
 
-  constructor() { }
-
-  init(config: Config) {
-
-    this._router = Router();
-
-    // auth
-
-    const authRouter = Router();
-
-    authRouter.post('/login', json(), wrapAsync(async (req, res) => {
-      if(config.whitelist && !config.whitelist.includes(req.body.username))
-        throw new AuthError('Whitelist is active.');
-
-      if(!req.body.scopes || !(req.body.scopes instanceof Array))
-        throw new AuthError('Must provide scope(s)!');
-
-      const user = await db.getUserFromUsername(req.body.username);
-      if(!user)
-        throw new AuthError('Username / password mismatch.');
-
-      const pass = await hash(user.salt, req.body.password);
-      if(user.pass !== pass)
-        throw new AuthError('Username / password mismatch.');
-
-      res.send(await db.addSession(user.id, req.body.scopes ));
-    }), handleValidationError);
-
-    authRouter.use(handleError('auth'));
-
-    authRouter.post('/register', json(), wrapAsync(async (req, res) => {
-      if(!req.body.username || !req.body.password)
-        throw new MalformedError('Must have a username and password!');
-
-      if(config.whitelist && !config.whitelist.includes(req.body.username))
-        throw new NotAllowedError('Whitelist is active.');
-
-      if(await db.getUserFromUsername(req.body.username))
-        throw new NotAllowedError('Username taken!');
-
-      const salt = randomBytes(128).toString('hex');
-      const user: User = {
-        username: req.body.username,
-        salt,
-        pass: await hash(salt, req.body.password)
-      };
-
-      await db.addUser(user);
-      res.sendStatus(204);
-    }));
-
-    authRouter.post('/change-pass', validateSession(), json(), wrapAsync(async (req, res) => {
-      if(!req.body.password || !req.body.newpass)
-        throw new MalformedError('Body must have a password, and a newpass.');
-
-      if(await hash(req.user.salt, req.body.password) !== req.user.pass)
-        throw new NotAllowedError('Password mismatch.');
-
-      const salt = randomBytes(128).toString('hex');
-      const pass = hash(salt, req.body.newpass);
-
-      await db.putUser(req.user.id, Object.assign(req.user, { salt, pass }));
-      const sessions = await db.getSessionsForUser(req.user.id);
-      await db.delManySessions(sessions.filter(a => a !== req.session.id));
-    }));
-
-    authRouter.post('/logout', validateSession(), wrapAsync(async (req, res) => {
-      await db.delSession(req.session.id);
-      res.sendStatus(204);
-    }));
-
-    authRouter.get('/refresh', validateSession(), wrapAsync(async (req, res) => {
-      const sess = await db.addSession(req.user.id, req.session.scopes);
-      await db.delSession(req.session.id);
-      res.json(sess);
-    }));
-
-    this.router.use('/auth', authRouter);
-    this.router.get('/self', validateSession(), wrapAsync(async (req, res) => {
-      res.json({ id: req.user.id, username: req.user.username,});
-    }));
-    this.router.delete('/self', validateSession(), wrapAsync(async (req, res) => {
-      if(req.user && req.session.scopes.includes('/')) {
-        await db.delUser(req.user.id);
-        await db.delFileInfoRecurse('/' + req.user.id);
-        await new Promise<void>((res, rej) =>
-          fs.rm(path.join(config.storageRoot, req.user.id), { recursive: true, maxRetries: 3 },
-          (e) => e ? rej(e) : res())
-        );
-      } else throw new NotAllowedError('Can only delete self with root scope!');
-      res.sendStatus(204);
-    }));
-
-    // files
+  init(config: { storageRoot: string, storageMax?: number, userStorageMax?: number },
+    db: StoreDB,
+    sessionValidator: (req: Request, res: Response, next: NextFunction) => void,
+    router = Router(),
+    errorHandler = handleError) {
 
     const filesRouter = Router({ mergeParams: true });
 
@@ -180,16 +87,31 @@ class Api {
     }));
 
     filesRouter.delete(new RegExp(`/${PATH_REGEX}`), parsePath, wrapAsync(async (req, res) => {
+      if(!await fs.access(req.filesParams.filePath, 0o600).then(() => true, () => false))
+        throw new NotFoundError('Could not find file, or do not have access.');
+
       await fs.remove(req.filesParams.filePath);
       await db.delFileInfo(req.filesParams.infoPath);
+
+      // get all folders, minus user folder & file
+      const folders = (req.filesParams.filePath as string).slice(path.resolve(config.storageRoot).length).split(/[\/\\]+/g).filter(a => Boolean(a)).slice(0, -1);
+      for(let i = 0; i < folders.length; i++) {
+        const dir = path.join(config.storageRoot, folders.slice(0, folders.length - i).join('/'));
+        const size = await sizeOf(dir);
+        if(!size)
+          await fs.rmdir(dir);
+        else
+          break;
+      }
+
       res.sendStatus(204);
     }));
 
-    this.router.use('/files', validateSession(), filesRouter, handleError('files'));
+    router.use('/files', sessionValidator, filesRouter, errorHandler('files'));
 
     // list-files
 
-    this.router.get('/list-files', validateSession(), wrapAsync(async (req, res) => {
+    router.get('/list-files', sessionValidator, wrapAsync(async (req, res) => {
       if(!req.session.scopes.includes('/'))
         throw new NotAllowedError('Can only list-files root if scope is global ("/")!');
 
@@ -200,9 +122,9 @@ class Api {
         res.json(await db.listFilesAdvance(dirPath, page))
       else
         res.json(await db.listFiles(dirPath, page))
-    }), handleError('list-files-global'));
+    }), errorHandler('list-files-global'));
 
-    this.router.get(new RegExp(`/list-files/${PATH_REGEX}`), validateSession(), wrapAsync(async (req, res) => {
+    router.get(new RegExp(`/list-files/${PATH_REGEX}`), sessionValidator, wrapAsync(async (req, res) => {
       req.params.path = req.params[0];
       const dirPath = '/' + req.user.id + '/' + req.params.path;
 
@@ -215,9 +137,9 @@ class Api {
         res.json(await db.listFilesAdvance(dirPath, page))
       else
         res.json(await db.listFiles(dirPath, page))
-    }), handleError('list-files-path'));
+    }), errorHandler('list-files-path'));
 
-    this.router.get('/storage-stats', validateSession(), wrapAsync(async (req, res) => {
+    router.get('/storage-stats', sessionValidator, wrapAsync(async (req, res) => {
       const used = await sizeOf(path.join(config.storageRoot, req.user.id));
       let max = -1;
 
@@ -235,7 +157,7 @@ class Api {
       res.json({ used, available: max > 0 ? max - used : -1, max });
     }))
 
-    this.router.get(new RegExp(`/public/([^/]+)/${PATH_REGEX}`), wrapAsync(async (req, res) => {
+    router.get(new RegExp(`/public/([^/]+)/${PATH_REGEX}`), wrapAsync(async (req, res) => {
       const userName = req.params[0];
       const user = await db.getUserFromUsername(userName);
       if(!user)
@@ -256,7 +178,7 @@ class Api {
         res.sendFile(filePath);
     }));
 
-    this.router.post(new RegExp(`/public-info/([^/]+)`), json(), wrapAsync(async (req, res) => {
+    router.post(new RegExp(`/public-info/([^/]+)`), json(), wrapAsync(async (req, res) => {
       const userName = req.params[0];
       const user = await db.getUserFromUsername(userName);
       if(!user)
@@ -275,8 +197,8 @@ class Api {
       res.json(infoTree);
     }));
 
-    this.router.use(handleError('api'));
+    return router;
   }
 }
 
-export default new Api();
+export default new StoreApi();

@@ -2,11 +2,12 @@
   "name": "tiny-disk-host",
   "version": "1.0.0",
   "description": "A tiny disk host for multi-user storage",
-  "main": "dist/tiny-disk-host.js",
+  "main": "lib/index",
   "scripts": {
     "build": "del-cli build && tsc",
-    "start": "node build/tiny-disk-host.js",
-    "test": "del-cli build && tsc && node build/tiny-disk-host.js"
+    "build-lib": "del-cli lib && tsc -p tsconfig.lib.json",
+    "start": "node build/server/tiny-disk-host.js",
+    "test": "del-cli build && tsc && node build/server/tiny-disk-host.js"
   },
   "keywords": [
     "tiny",
@@ -40,6 +41,7 @@
     "level": "^6.0.1",
     "mime-types": "^2.1.28",
     "source-map-support": "^0.5.19",
+    "tiny-host-common": "github:michaelfedora/tiny-host-common",
     "uuid": "^8.3.2"
   }
 }

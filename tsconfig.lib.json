@@ -1,0 +1,23 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "outDir": "./lib",
+    "baseUrl": "src/lib",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "declaration": true,
+    "target": "es2019",
+    "strict": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "lib": [ "esnext" ]
+  },
+  "include": [
+    "src/lib/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

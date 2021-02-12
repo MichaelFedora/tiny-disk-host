@@ -6,10 +6,12 @@ import * as helmet from 'helmet';
 import * as fs from 'fs-extra';
 
 import { Config } from './types';
+
 import api from './api';
 import db from './db';
 
 let config: Config;
+
 const production = process.env.NODE_ENV === 'production';
 
 try {
@@ -28,7 +30,7 @@ try {
 
 async function cleanSessions() {
   try {
-    await db.cleanSessions();
+    await db.auth.cleanSessions();
     setTimeout(cleanSessions, 10 * 60 * 1000);
   } catch(e) {
     console.error(`Error cleaning sessions: ${e.stack || e}`);

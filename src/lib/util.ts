@@ -1,18 +1,11 @@
-import { pbkdf2 } from 'crypto';
 import * as path from 'path';
-import fs from 'fs-extra';
+import * as fs from 'fs-extra';
 import { Readable } from 'stream';
 
-export async function hash(salt: string, password: string) {
-  return new Promise<string>((res, rej) => {
-    pbkdf2(password, salt, 10000, 512, 'sha256', (err, data) => {
-      if(err)
-        return rej(err);
-      else
-        return res(data.toString('hex'));
-    });
-  });
-}
+export { parseTrue } from 'tiny-host-common/lib/middleware';
+
+export const PATH_REGEX = '(.+)';
+// '((?:[a-zA-Z0-9_\\-\\ \.]+/+)*[a-zA-Z0-9_\\-\\ \.]+)';
 
 /**
  * Get's the size of a file or directory.

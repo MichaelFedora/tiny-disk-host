@@ -15,28 +15,7 @@ export interface FileListAdvance {
   page?: number;
 }
 
-export interface Session {
-  id?: string;
-  user: string;
-  scopes: string[];
-  created: number;
-}
-
-export interface User {
-  id?: string;
-  username: string;
-  pass: string;
-  salt: string;
-}
-
 export interface Config {
-  ip: string;
-  port: number;
-
-  sessionExpTime: number;
-  whitelist?: string[];
-
-  dbName: string;
   storageRoot: string;
 
   userStorageMax?: number;

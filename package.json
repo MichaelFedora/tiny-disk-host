@@ -2,6 +2,7 @@
   "name": "tiny-disk-host",
   "version": "1.0.0",
   "description": "A tiny disk host for multi-user storage",
+  "repository": "github:MichaelFedora/tiny-disk-host",
   "main": "lib/index",
   "scripts": {
     "build": "del-cli build && tsc",

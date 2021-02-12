@@ -29,6 +29,11 @@ interface Config {
 
 todo
 
+### todo
+
+- copy & move commands, instead of having to read/write
+  all the data
+
 ### License
 
 MIT

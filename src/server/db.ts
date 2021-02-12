@@ -1,7 +1,7 @@
 import * as level from 'level';
 import { LevelUp } from 'levelup';
-import { StoreDB } from '../lib';
 import { AuthDB } from 'tiny-host-common';
+import { StoreDB } from '../lib';
 
 import { Config } from './types';
 

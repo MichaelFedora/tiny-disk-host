@@ -1,12 +1,12 @@
-import { NextFunction, Request, Response } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { handleError } from 'tiny-host-common';
 import { StoreDB } from './store-db';
-declare class StoreApi {
-    init(config: {
+export declare class StoreApi {
+    private _router;
+    get router(): Router;
+    constructor(config: {
         storageRoot: string;
         storageMax?: number;
         userStorageMax?: number;
-    }, db: StoreDB, sessionValidator: (req: Request, res: Response, next: NextFunction) => void, router?: import("express-serve-static-core").Router, errorHandler?: typeof handleError): import("express-serve-static-core").Router;
+    }, db: StoreDB, sessionValidator: (req: Request, res: Response, next: NextFunction) => void, router?: import("express-serve-static-core").Router, errorHandler?: typeof handleError);
 }
-declare const _default: StoreApi;
-export default _default;

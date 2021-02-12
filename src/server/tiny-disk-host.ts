@@ -4,6 +4,7 @@ import * as express from 'express';
 import * as cors from 'cors';
 import * as helmet from 'helmet';
 import * as fs from 'fs-extra';
+import * as path from 'path';
 
 import { Config } from './types';
 
@@ -23,6 +24,14 @@ try {
 
 try {
   db.init(config);
+  db.auth.onUserDelete.subscribe(async user => {
+    try {
+      await db.store.delFileInfoRecurse('/' + user.id);
+      await fs.promises.rm(path.join(config.storageRoot, user.id), { force: true, recursive: true });
+    } catch(e) {
+      console.error('Error deleting user info!', e);
+    }
+  });
 } catch(e) {
   console.error(`Couldn't create database! ${e.stack || e}`);
   process.exit(1);

@@ -1,18 +1,21 @@
-import * as path from 'path';
 import { Router } from 'express';
-import * as fs from 'fs-extra';
+
+import { AuthApi, validateUserSession, handleError } from 'tiny-host-common';
+import { StoreApi } from '../lib';
 
 import { Config } from './types';
 import db from './db';
-
-import { StoreApi } from '../lib';
-
-import { AuthApi, validateUserSession, User, handleError } from 'tiny-host-common';
 
 class Api {
 
   private _router: Router;
   public get router() { return this._router; }
+
+  private _authApi: AuthApi;
+  public get authApi() { return this._authApi; }
+
+  private _storeApi: StoreApi;
+  public get storeApi() { return this._storeApi; }
 
   constructor() { }
 
@@ -20,19 +23,10 @@ class Api {
 
     this._router = Router();
 
-    const onUserDelete = async (user: User) => {
-      try {
-        await db.store.delFileInfoRecurse('/' + user.id);
-        await fs.promises.rm(path.join(config.storageRoot, user.id), { force: true, recursive: true });
-      } catch(e) {
-        console.error('Error deleting user info!', e); // should I re-throw?
-      }
-    };
-
     const validateSession = validateUserSession(db.auth);
 
-    AuthApi.init(config, db.auth, onUserDelete, this.router);
-    StoreApi.init(config, db.store, validateSession, this.router, handleError);
+    this._authApi = new AuthApi(config, db.auth, this.router);
+    this._storeApi = new StoreApi(config, db.store, validateSession, this.router, handleError);
 
     this.router.use(handleError('api'));
   }

@@ -10,13 +10,18 @@ import { parseTrue, sizeOf, PATH_REGEX } from './util';
 
 import { StoreDB } from './store-db';
 
-class StoreApi {
+export class StoreApi {
 
-  init(config: { storageRoot: string, storageMax?: number, userStorageMax?: number },
+  private _router: Router;
+  public get router() { return this._router; }
+
+  constructor(config: { storageRoot: string, storageMax?: number, userStorageMax?: number },
     db: StoreDB,
     sessionValidator: (req: Request, res: Response, next: NextFunction) => void,
     router = Router(),
     errorHandler = handleError) {
+
+    this._router = router;
 
     const filesRouter = Router({ mergeParams: true });
 
@@ -196,9 +201,5 @@ class StoreApi {
 
       res.json(infoTree);
     }));
-
-    return router;
   }
 }
-
-export default new StoreApi();

@@ -8,15 +8,15 @@ import { wrapAsync, handleError, MalformedError, NotAllowedError, NotFoundError 
 import { FileListAdvance } from './types';
 import { parseTrue, sizeOf, PATH_REGEX } from './util';
 
-import { StoreDB } from './store-db';
+import { DiskDB } from './disk-db';
 
-export class StoreApi {
+export class DiskApi {
 
   private _router: Router;
   public get router() { return this._router; }
 
   constructor(config: { storageRoot: string, storageMax?: number, userStorageMax?: number },
-    db: StoreDB,
+    db: DiskDB,
     sessionValidator: (req: Request, res: Response, next: NextFunction) => void,
     router = Router(),
     errorHandler = handleError) {

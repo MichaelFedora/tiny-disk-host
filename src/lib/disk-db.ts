@@ -2,7 +2,7 @@ import { LevelUp } from 'levelup';
 
 import { FileInfo, FileList, FileListAdvance } from './types';
 
-export class StoreDB {
+export class DiskDB {
 
   public get db(): LevelUp { return this._db; }
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 import { AuthApi, validateUserSession, handleError } from 'tiny-host-common';
-import { StoreApi } from '../lib';
+import { DiskApi } from '../lib';
 
 import { Config } from './types';
 import db from './db';
@@ -14,8 +14,8 @@ class Api {
   private _authApi: AuthApi;
   public get authApi() { return this._authApi; }
 
-  private _storeApi: StoreApi;
-  public get storeApi() { return this._storeApi; }
+  private _diskApi: DiskApi;
+  public get diskApi() { return this._diskApi; }
 
   constructor() { }
 
@@ -26,7 +26,7 @@ class Api {
     const validateSession = validateUserSession(db.auth);
 
     this._authApi = new AuthApi(config, db.auth, this.router);
-    this._storeApi = new StoreApi(config, db.store, validateSession, this.router, handleError);
+    this._diskApi = new DiskApi(config, db.disk, validateSession, this.router, handleError);
 
     this.router.use(handleError('api'));
   }

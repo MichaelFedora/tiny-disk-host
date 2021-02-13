@@ -26,7 +26,7 @@ try {
   db.init(config);
   db.auth.onUserDelete.subscribe(async user => {
     try {
-      await db.store.delFileInfoRecurse('/' + user.id);
+      await db.disk.delFileInfoRecurse('/' + user.id);
       await fs.promises.rm(path.join(config.storageRoot, user.id), { force: true, recursive: true });
     } catch(e) {
       console.error('Error deleting user info!', e);

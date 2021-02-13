@@ -8,7 +8,7 @@ declare module 'express-serve-static-core' {
         filesParams?: any;
     }
 }
-import { StoreApi } from './store-api';
-import { StoreDB } from './store-db';
-import { FileInfo, FileList, FileListAdvance, Config as StoreConfig } from './types';
-export { StoreApi, StoreDB, FileInfo, FileList, FileListAdvance, StoreConfig };
+import { DiskApi } from './disk-api';
+import { DiskDB } from './disk-db';
+import { FileInfo, FileList, FileListAdvance, Config as DiskConfig } from './types';
+export { DiskApi, DiskDB, FileInfo, FileList, FileListAdvance, DiskConfig };

@@ -10,15 +10,15 @@ declare module 'express-serve-static-core' {
   }
 }
 
-import { StoreApi } from './store-api';
-import { StoreDB } from './store-db';
-import { FileInfo, FileList, FileListAdvance, Config as StoreConfig } from './types';
+import { DiskApi } from './disk-api';
+import { DiskDB } from './disk-db';
+import { FileInfo, FileList, FileListAdvance, Config as DiskConfig } from './types';
 
 export {
-  StoreApi,
-  StoreDB,
+  DiskApi,
+  DiskDB,
   FileInfo,
   FileList,
   FileListAdvance,
-  StoreConfig
+  DiskConfig
 };

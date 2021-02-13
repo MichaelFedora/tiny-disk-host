@@ -1,6 +1,6 @@
 import { LevelUp } from 'levelup';
 import { FileInfo, FileList, FileListAdvance } from './types';
-export declare class StoreDB {
+export declare class DiskDB {
     private _db;
     getUserFromUsername: (username: string) => Promise<{
         id?: string;

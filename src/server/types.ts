@@ -1,7 +1,7 @@
 import { AuthConfig } from 'tiny-host-common';
-import { StoreConfig } from '../lib';
+import { DiskConfig } from '../lib';
 
-export interface Config extends StoreConfig, AuthConfig {
+export interface Config extends DiskConfig, AuthConfig {
   ip: string;
   port: number;
 

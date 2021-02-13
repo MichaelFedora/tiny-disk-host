@@ -92,7 +92,7 @@ export class StoreApi {
     }));
 
     filesRouter.delete(new RegExp(`/${PATH_REGEX}`), parsePath, wrapAsync(async (req, res) => {
-      if(!await fs.access(req.filesParams.filePath, 0o600).then(() => true, () => false))
+      if(!await fs.access(req.filesParams.filePath).then(() => true, () => false))
         throw new NotFoundError('Could not find file, or do not have access.');
 
       await fs.remove(req.filesParams.filePath);

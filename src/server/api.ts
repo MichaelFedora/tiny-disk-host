@@ -25,7 +25,13 @@ class Api {
 
     const validateSession = validateUserSession(db.auth);
 
-    this._authApi = new AuthApi(config, db.auth, this.router);
+    this._authApi = new AuthApi({
+      whitelist: config.whitelist,
+      handshakeExpTime: config.handshakeExpTime,
+      requireScopes: true,
+      allowHandshakes: true,
+      allowMasterKeys: true,
+    }, db.auth, this.router);
     this._diskApi = new DiskApi(config, db.disk, validateSession, this.router, handleError);
 
     this.router.use(handleError('api'));

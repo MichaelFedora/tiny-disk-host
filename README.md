@@ -33,6 +33,10 @@ todo
 
 - copy & move commands, instead of having to read/write
   all the data
+- locked file-info status when processing big files
+- route for uploading multi-part form data (big files)
+- ability to
+["stream"](https://blog.j2i.net/2021/01/10/video-streaming-with-node-and-express/) files
 
 ### License
 

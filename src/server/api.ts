@@ -32,7 +32,7 @@ class Api {
       allowHandshakes: true,
       allowMasterKeys: true,
     }, db.auth, this.router);
-    this._diskApi = new DiskApi(config, db.disk, validateSession, this.router, handleError);
+    this._diskApi = new DiskApi(config, db.disk, username => db.auth.getUserFromUsername(username), validateSession, this.router, handleError);
 
     this.router.use(handleError('api'));
   }

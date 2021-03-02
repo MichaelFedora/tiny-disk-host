@@ -1,8 +1,8 @@
 import { LevelUp } from 'levelup';
 
-import { FileInfo, FileList, FileListAdvance } from './types';
+import { FileInfo, FileList, FileListAdvance, TinyFileDB } from 'tiny-host-common';
 
-export class DiskDB {
+export class DiskDB implements TinyFileDB {
 
   public get db(): LevelUp { return this._db; }
 

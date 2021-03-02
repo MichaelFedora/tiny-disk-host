@@ -3,12 +3,9 @@ import { json, NextFunction, Request, Response, Router } from 'express';
 import * as fs from 'fs-extra';
 import * as mime from 'mime-types';
 
-import { wrapAsync, handleError, MalformedError, NotAllowedError, NotFoundError } from 'tiny-host-common';
+import { FileListAdvance, wrapAsync, handleError, MalformedError, NotAllowedError, NotFoundError, TinyFileDB, User } from 'tiny-host-common';
 
-import { FileListAdvance } from './types';
 import { parseTrue, sizeOf, PATH_REGEX } from './util';
-
-import { DiskDB } from './disk-db';
 
 export class DiskApi {
 
@@ -16,7 +13,8 @@ export class DiskApi {
   public get router() { return this._router; }
 
   constructor(config: { storageRoot: string, storageMax?: number, userStorageMax?: number },
-    db: DiskDB,
+    db: TinyFileDB,
+    getUserFromUsername: (username: string) => Promise<User>,
     sessionValidator: (req: Request, res: Response, next: NextFunction) => void,
     router = Router(),
     errorHandler = handleError) {
@@ -164,7 +162,7 @@ export class DiskApi {
 
     router.get(new RegExp(`/public/([^/]+)/${PATH_REGEX}`), wrapAsync(async (req, res) => {
       const userName = req.params[0];
-      const user = await db.getUserFromUsername(userName);
+      const user = await getUserFromUsername(userName);
       if(!user)
         throw new NotFoundError('User not found with username "' + userName + '"!');
 
@@ -185,7 +183,7 @@ export class DiskApi {
 
     router.post(new RegExp(`/public-info/([^/]+)`), json(), wrapAsync(async (req, res) => {
       const userName = req.params[0];
-      const user = await db.getUserFromUsername(userName);
+      const user = await getUserFromUsername(userName);
       if(!user)
         throw new NotFoundError('User not found with username "' + userName + '"!');
 

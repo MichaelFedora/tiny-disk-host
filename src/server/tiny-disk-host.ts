@@ -83,6 +83,9 @@ try {
 
   app.use('/', api.router);
 
+  app.use(express.static(path.join(__dirname, '../../node_modules/tiny-host-common/dist')));
+  app.get('*', (_, res) => res.sendFile(path.join(__dirname, '../../node_modules/tiny-host-common/dist/index.html')));
+
   app.use((err, req, res, next) => {
     console.error('Express caught an error!', err);
     res.status(500).json({ message: 'Something broke!' });

@@ -25,6 +25,8 @@ class Api {
 
     const validateSession = validateUserSession(db.auth);
 
+    this.router.get('/type', (_, res) => res.send('file'));
+
     this._authApi = new AuthApi({
       whitelist: config.whitelist,
       handshakeExpTime: config.handshakeExpTime,

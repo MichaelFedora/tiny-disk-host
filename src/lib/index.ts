@@ -14,4 +14,4 @@ export { DiskApi } from './disk-api';
 export { DiskDB } from './disk-db';
 export { Config as DiskConfig } from './types';
 
-export { FileInfo, FileList, FileListAdvance,  } from 'tiny-host-common';
+export { FileInfo, FileList, FileListAdvance } from 'tiny-host-common';

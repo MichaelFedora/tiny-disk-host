@@ -12,7 +12,6 @@ import api from './api';
 import db from './db';
 
 let config: Config;
-
 const production = process.env.NODE_ENV === 'production';
 
 try {

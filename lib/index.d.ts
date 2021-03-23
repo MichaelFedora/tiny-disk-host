@@ -8,7 +8,7 @@ declare module 'express-serve-static-core' {
         filesParams?: any;
     }
 }
-import { DiskApi } from './disk-api';
-import { DiskDB } from './disk-db';
-import { FileInfo, FileList, FileListAdvance, Config as DiskConfig } from './types';
-export { DiskApi, DiskDB, FileInfo, FileList, FileListAdvance, DiskConfig };
+export { DiskApi } from './disk-api';
+export { DiskDB } from './disk-db';
+export { Config as DiskConfig } from './types';
+export { FileInfo, FileList, FileListAdvance } from 'tiny-host-common';

@@ -1,6 +1,6 @@
 import { LevelUp } from 'levelup';
-import { FileInfo, FileList, FileListAdvance } from './types';
-export declare class DiskDB {
+import { FileInfo, FileList, FileListAdvance, TinyFileDB } from 'tiny-host-common';
+export declare class DiskDB implements TinyFileDB {
     private _db;
     getUserFromUsername: (username: string) => Promise<{
         id?: string;

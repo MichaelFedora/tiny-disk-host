@@ -17,7 +17,7 @@ const production = process.env.NODE_ENV === 'production';
 try {
   config = fs.readJsonSync('config.json');
 } catch(e) {
-  console.error(`Couldn't read config.json! ${e.stack || e}`);
+  console.error(`Couldn't read config.json! ${e instanceof Error ? e.stack : e}`);
   process.exit(1);
 }
 
@@ -32,7 +32,7 @@ try {
     }
   });
 } catch(e) {
-  console.error(`Couldn't create database! ${e.stack || e}`);
+  console.error(`Couldn't create database! ${e instanceof Error ? e.stack : e}`);
   process.exit(1);
 }
 
@@ -42,7 +42,7 @@ async function cleanSessions() {
     await db.auth.cleanHandshakes();
     setTimeout(cleanSessions, 10 * 60 * 1000);
   } catch(e) {
-    console.error(`Error cleaning sessions: ${e.stack || e}`);
+    console.error(`Error cleaning sessions: ${e instanceof Error ? e.stack : e}`);
   }
 }
 cleanSessions();
@@ -98,7 +98,7 @@ try {
 } catch(err) {
   console.error('tiny-disk-host.js caught an error!');
   console.error(err);
-  if(err.stack)
+  if(err instanceof Error)
     console.log(err.stack);
   process.exit(1);
 }

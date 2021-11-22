@@ -24,8 +24,8 @@ class DB {
     this._auth = new AuthDB(config, this._db);
     this._disk = new DiskDB(this._db, username => this._auth.getUserFromUsername(username));
 
-    /* dump
-    this.db.createReadStream({ gt: 'file!!', lt: 'file!"' })
+    //* dump
+    this.db.createReadStream({ gt: 'user!!', lt: 'user!"' })
       .on('data', ({ key, value }) => console.log(key, value));
     //*/
   }
